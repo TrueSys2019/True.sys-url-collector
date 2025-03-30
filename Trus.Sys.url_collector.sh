@@ -1,5 +1,5 @@
 # Creating the file while preventing any formatting issues
-cat > url_collector.sh << 'EOF'
+cat > Trus.Sys.url_collector.sh << 'EOF'
 #!/bin/bash
 
 # --- Automatic Formatting Fix ---
@@ -65,7 +65,7 @@ install_tools() {
 # --- Main Function ---
 main() {
     if [ -z "$1" ]; then
-        echo "🔹 Usage: ./url_collector.sh example.com"
+        echo "🔹 Usage: ./Trus.Sys.url_collector.sh example.com"
         exit 1
     fi
 
@@ -109,5 +109,5 @@ main "$@"
 EOF
 
 # Making the script executable
-chmod +x url_collector.sh
-echo "[✔] url_collector.sh has been created and made executable!"
+chmod +x Trus.Sys.url_collector.sh
+echo "[✔] Trus.Sys.url_collector.sh has been created and made executable!"
