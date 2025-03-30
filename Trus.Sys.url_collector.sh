@@ -1,11 +1,11 @@
-# إنشاء الملف مع منع أي مشاكل في التنسيق
+# Creating the file while preventing any formatting issues
 cat > url_collector.sh << 'EOF'
 #!/bin/bash
 
-# --- إصلاح تلقائي لمشاكل التنسيق ---
+# --- Automatic Formatting Fix ---
 fix_formatting() {
     if grep -q -U $'\x0D' "$0"; then
-        echo -e "\n[+] اكتشاف مشكلة في تنسيق الملف. جاري الإصلاح..."
+        echo -e "\n[+] Detected a formatting issue. Fixing..."
         sed -i 's/\r$//' "$0"
         exec "$0" "$@"
         exit $?
@@ -13,16 +13,16 @@ fix_formatting() {
 }
 fix_formatting "$@"
 
-# --- تثبيت المتطلبات الأساسية ---
+# --- Installing Essential Dependencies ---
 install_dependencies() {
-    echo -e "\n[+] التحقق من المتطلبات الأساسية..."
+    echo -e "\n[+] Checking essential dependencies..."
     
     for pkg in git golang python3 python3-pip; do
         if ! command -v "$pkg" &>/dev/null; then
-            echo "[!] $pkg غير مثبت. جاري التثبيت..."
-            sudo apt-get install -y "$pkg" || { echo "❌ فشل تثبيت $pkg"; exit 1; }
+            echo "[!] $pkg is not installed. Installing..."
+            sudo apt-get install -y "$pkg" || { echo "❌ Failed to install $pkg"; exit 1; }
         else
-            echo "[✓] $pkg مثبت بالفعل."
+            echo "[✓] $pkg is already installed."
         fi
     done
 
@@ -30,9 +30,9 @@ install_dependencies() {
     source ~/.bashrc
 }
 
-# --- تثبيت الأدوات المطلوبة ---
+# --- Installing Required Tools ---
 install_tools() {
-    echo -e "\n[+] التحقق من الأدوات المثبتة..."
+    echo -e "\n[+] Checking installed tools..."
 
     declare -A tools=(
         ["gau"]="go install github.com/lc/gau/v2/cmd/gau@latest"
@@ -45,27 +45,27 @@ install_tools() {
 
     for tool in "${!tools[@]}"; do
         if ! command -v "$tool" &>/dev/null; then
-            echo "[!] تثبيت $tool ..."
-            eval "${tools[$tool]}" || { echo "❌ فشل تثبيت $tool"; exit 1; }
+            echo "[!] Installing $tool..."
+            eval "${tools[$tool]}" || { echo "❌ Failed to install $tool"; exit 1; }
         else
-            echo "[✓] $tool مثبت بالفعل."
+            echo "[✓] $tool is already installed."
         fi
     done
 
-    # تثبيت ParamSpider
+    # Installing ParamSpider
     if [ ! -d "ParamSpider" ]; then
-        echo "[!] تثبيت ParamSpider ..."
-        git clone https://github.com/devanshbatham/ParamSpider || { echo "❌ فشل تحميل ParamSpider"; exit 1; }
-        pip3 install -r ParamSpider/requirements.txt || { echo "❌ فشل تثبيت متطلبات ParamSpider"; exit 1; }
+        echo "[!] Installing ParamSpider..."
+        git clone https://github.com/devanshbatham/ParamSpider || { echo "❌ Failed to clone ParamSpider"; exit 1; }
+        pip3 install -r ParamSpider/requirements.txt || { echo "❌ Failed to install ParamSpider requirements"; exit 1; }
     else
-        echo "[✓] ParamSpider مثبت بالفعل."
+        echo "[✓] ParamSpider is already installed."
     fi
 }
 
-# --- الوظيفة الرئيسية ---
+# --- Main Function ---
 main() {
     if [ -z "$1" ]; then
-        echo "🔹 طريقة الاستخدام: ./url_collector.sh example.com"
+        echo "🔹 Usage: ./url_collector.sh example.com"
         exit 1
     fi
 
@@ -76,38 +76,38 @@ main() {
     OUTPUT_DIR="scan_results_$DOMAIN"
     mkdir -p "$OUTPUT_DIR"
 
-    echo -e "\n[+] بدء جمع الروابط لـ $DOMAIN ...\n"
+    echo -e "\n[+] Starting URL collection for $DOMAIN ...\n"
 
-    echo "[+] جلب الروابط من Wayback Machine & Common Crawl (gau)..."
+    echo "[+] Fetching URLs from Wayback Machine & Common Crawl (gau)..."
     gau "$DOMAIN" | sort -u > "$OUTPUT_DIR/gau_urls.txt"
 
-    echo "[+] جلب الروابط من Wayback Machine فقط (waybackurls)..."
+    echo "[+] Fetching URLs from Wayback Machine only (waybackurls)..."
     echo "$DOMAIN" | waybackurls | sort -u > "$OUTPUT_DIR/wayback_urls.txt"
 
-    echo "[+] الزحف باستخدام Katana..."
+    echo "[+] Crawling with Katana..."
     katana -u "https://$DOMAIN" -depth 3 -jc -kf -o "$OUTPUT_DIR/katana_urls.txt"
 
-    echo "[+] الزحف باستخدام GoSpider..."
+    echo "[+] Crawling with GoSpider..."
     gospider -s "https://$DOMAIN" -d 2 --js --other-source --subs -o "$OUTPUT_DIR/gospider" -c 10 -t 20
 
-    echo "[+] دمج وتصفية الروابط..."
+    echo "[+] Merging and filtering URLs..."
     cat "$OUTPUT_DIR"/gau_urls.txt "$OUTPUT_DIR"/wayback_urls.txt "$OUTPUT_DIR"/katana_urls.txt "$OUTPUT_DIR"/gospider/* | sort -u > "$OUTPUT_DIR/all_urls.txt"
 
-    echo "[+] التحقق من الروابط النشطة (httpx)..."
+    echo "[+] Checking live URLs (httpx)..."
     cat "$OUTPUT_DIR/all_urls.txt" | httpx -status-code -title -tech-detect -o "$OUTPUT_DIR/live_urls.txt"
 
-    echo "[+] البحث عن باراميترات (ParamSpider)..."
+    echo "[+] Extracting parameters (ParamSpider)..."
     python3 ParamSpider/paramspider.py -d "$DOMAIN" --output "$OUTPUT_DIR/param_urls.txt"
 
-    echo "[+] البحث عن باراميترات مخفية (Arjun)..."
+    echo "[+] Finding hidden parameters (Arjun)..."
     arjun -i "$OUTPUT_DIR/live_urls.txt" -o "$OUTPUT_DIR/arjun_params.json"
 
-    echo -e "\n[✔] اكتمل المسح! النتائج محفوظة في: $OUTPUT_DIR"
+    echo -e "\n[✔] Scan completed! Results saved in: $OUTPUT_DIR"
 }
 
 main "$@"
 EOF
 
-# جعل السكريبت قابلًا للتنفيذ
+# Making the script executable
 chmod +x url_collector.sh
-echo "[✔] تم إنشاء url_collector.sh وجعله قابلًا للتشغيل!"
+echo "[✔] url_collector.sh has been created and made executable!"
